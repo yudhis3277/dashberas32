@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <!--
+        PENJELASAN BAGIAN <head>:
+        - charset="UTF-8": Menentukan set karakter yang digunakan adalah UTF-8, standar untuk web modern.
+        - name="viewport": Penting untuk desain responsif. Mengatur agar lebar halaman sesuai dengan lebar layar perangkat dan skala awal adalah 1.0.
+        - title: Judul yang akan muncul di tab browser.
+        - Bootstrap CSS: Link ke file CSS dari Bootstrap 5 melalui CDN (Content Delivery Network). Ini menyediakan semua style dasar untuk layout, tombol, card, tabel, dll.
+        - Ikon Bootstrap: Link ke library ikon Bootstrap untuk mempercantik tampilan.
+        - Chart.js: Link ke library JavaScript untuk membuat grafik.
+        - Papa Parse: Library baru untuk membaca dan mem-parsing file CSV dengan mudah.
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring Rata-Rata Harga Beras di Penggilingan Jawa Barat</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- Custom CSS untuk mempercantik tampilan -->
+    <style>
+        /* PENJELASAN BAGIAN <style>: Bagian ini berisi CSS kustom untuk memberikan style yang tidak ada di Bootstrap. */
+        body {
+            background-color: #f0f2f5; /* Warna latar belakang body yang lebih lembut */
+        }
+        .card {
+            border: none; /* Menghilangkan border pada card */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Memberi bayangan agar card terlihat 'mengambang' */
+        }
+        .card-metric h5 {
+            font-size: 1rem; /* Ukuran font untuk judul metric */
+            color: #fff;
+            opacity: 0.9;
+        }
+        .card-metric h3 {
+            font-size: 2.2rem; /* Ukuran font untuk nilai metric */
+            font-weight: 700;
+            color: #fff;
+        }
+        /* Definisi warna gradasi untuk 5 card metric */
+        .gradient-1 { background: linear-gradient(45deg, #007bff, #0056b3); }
+        .gradient-2 { background: linear-gradient(45deg, #28a745, #1e7e34); }
+        .gradient-3 { background: linear-gradient(45deg, #ffc107, #d39e00); }
+        .gradient-4 { background: linear-gradient(45deg, #dc3545, #b02a37); }
+        .gradient-5 { background: linear-gradient(45deg, #17a2b8, #117a8b); }
+        
+        .chart-container {
+            position: relative;
+            height: 40vh; /* Tinggi container grafik, 40% dari tinggi viewport */
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-3">
+        <!-- Judul Dashboard -->
+        <div class="row mb-3">
+            <div class="col-md-9">
+                <h2 class="fw-bold">Dashboard Monitoring Rata-Rata Harga Beras di Penggilingan Jawa Barat 2025</h2>
+                <p class="text-muted"> Hasil Pencacahan SHPBG ke Penggilingan di 18 Kabupaten Jawab Barat yang tersebar di 60 Kecamatan</p>
+            </div>
+            <div class="col-md-3 d-flex align-items-center justify-content-end">
+                <div class="w-100">
+                    <label for="metricMonthFilter" class="form-label fw-bold">Pilih Bulan Data</label>
+                    <select id="metricMonthFilter" class="form-select"></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- BARIS PERTAMA: 5 CARD METRIC -->
+        <div class="row g-3 mb-4">
+            <!-- Card 1: Harga Total -->
+            <div class="col-xl col-lg-4 col-md-6 col-12">
+                <div class="card card-metric gradient-1 text-white">
+                    <div class="card-body">
+                        <h5 id="metricTotalTitle">Harga Total</h5>
+                        <h3 id="metricTotalValue">Memuat...</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- Card 2: Harga Premium -->
+            <div class="col-xl col-lg-4 col-md-6 col-12">
+                <div class="card card-metric gradient-2 text-white">
+                    <div class="card-body">
+                        <h5 id="metricPremiumTitle">Harga Premium</h5>
+                        <h3 id="metricPremiumValue">Memuat...</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- Card 3: Harga Medium -->
+            <div class="col-xl col-lg-4 col-md-6 col-12">
+                <div class="card card-metric gradient-3 text-white">
+                    <div class="card-body">
+                        <h5 id="metricMediumTitle">Harga Medium</h5>
+                        <h3 id="metricMediumValue">Memuat...</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- Card 4: Perubahan M to M -->
+            <div class="col-xl col-lg-6 col-md-6 col-12">
+                <div class="card card-metric gradient-4 text-white">
+                    <div class="card-body">
+                        <h5 id="metricM2MTitle">Perubahan M-to-M (Total)</h5>
+                        <h3 id="metricM2MValue">Memuat...</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- Card 5: Perubahan Y to Y -->
+            <div class="col-xl col-lg-6 col-md-12 col-12">
+                <div class="card card-metric gradient-5 text-white">
+                    <div class="card-body">
+                        <h5 id="metricY2YTitle">Perubahan Y-to-Y (Total)</h5>
+                        <h3 id="metricY2YValue">Memuat...</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BARIS GRAFIK -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header fw-bold">
+                        Perbandingan Harga Beras Perbulan
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header fw-bold">
+                        Tren Harga Beras Perbulan
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+		<!-- BARIS TABEL -->
+		<div class="row g-3">
+            <!-- Kolom Tabel 1: Harga Rata-rata per Bulan -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Harga Rata-Rata Beras per Bulan (Jawa Barat)</span>
+                        <div class="btn-group" role="group">
+                            <button id="downloadRataRataCSV" class="btn btn-outline-secondary btn-sm" title="Download as CSV">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                            </button>
+                            <button id="downloadRataRataXLS" class="btn btn-outline-success btn-sm" title="Download as Excel (CSV)">
+                                <i class="bi bi-file-earmark-excel"></i> Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bulan</th>
+                                    <th>Medium</th>
+                                    <th>Premium</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rataRataTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Kolom Tabel 2: Harga per Kabupaten -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                         <span class="fw-bold" id="kabupatenTableHeader">Harga Rata-Rata Beras per Kabupaten</span>
+                         <div class="btn-group" role="group">
+                            <button id="downloadKabupatenCSV" class="btn btn-outline-secondary btn-sm" title="Download as CSV">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                            </button>
+                            <button id="downloadKabupatenXLS" class="btn btn-outline-success btn-sm" title="Download as Excel (CSV)">
+                                <i class="bi bi-file-earmark-excel"></i> Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Kabupaten/Kota</th>
+                                    <th>Medium</th>
+                                    <th>Premium</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kabupatenTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variabel Global untuk menampung data yang sudah di-parse dan grafik
+        let dataRataRataJabar = [];
+        let dataPerKabupaten = {};
+        let barChart;
+        let lineChart;
+
+        // --- FUNGSI-FUNGSI BANTUAN ---
+        function exportToCSV(data, headers, keys, fileName) {
+            if (!data || data.length === 0) {
+                alert("Tidak ada data untuk diunduh.");
+                return;
+            }
+            const headerRow = headers.join(',');
+            const dataRows = data.map(row => {
+                return keys.map(key => {
+                    let cell = row[key] === null || row[key] === undefined ? '' : row[key];
+                    cell = String(cell).replace(/"/g, '""');
+                    if (String(cell).includes(',')) {
+                        cell = `"${cell}"`;
+                    }
+                    return cell;
+                }).join(',');
+            });
+            const csvContent = [headerRow, ...dataRows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `${fileName}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function formatRupiah(angka) {
+            if (angka === null || isNaN(angka) || angka === 0) return 'N/A';
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+            }).format(angka);
+        }
+        
+        function formatPersen(angka) {
+            if (angka === null || isNaN(angka)) return 'N/A';
+            const icon = angka > 0 ? '<i class="bi bi-arrow-up-right"></i> ' : '<i class="bi bi-arrow-down-right"></i> ';
+            return icon + angka.toFixed(2) + ' %';
+        }
+
+        // --- FUNGSI-FUNGSI PEMROSESAN DATA ---
+        function updateMetrics(bulan) {
+            const dataBulanIni = dataRataRataJabar.find(d => d.bulan === bulan);
+            if (dataBulanIni) {
+                document.getElementById('metricTotalTitle').innerHTML = `Harga Total (${dataBulanIni.short})`;
+                document.getElementById('metricTotalValue').textContent = formatRupiah(dataBulanIni.total);
+                document.getElementById('metricPremiumTitle').innerHTML = `Harga Premium (${dataBulanIni.short})`;
+                document.getElementById('metricPremiumValue').textContent = formatRupiah(dataBulanIni.premium);
+                document.getElementById('metricMediumTitle').innerHTML = `Harga Medium (${dataBulanIni.short})`;
+                document.getElementById('metricMediumValue').textContent = formatRupiah(dataBulanIni.medium);
+                document.getElementById('metricM2MTitle').innerHTML = `Perubahan M-to-M (${dataBulanIni.short})`;
+                document.getElementById('metricM2MValue').innerHTML = formatPersen(dataBulanIni.m2m);
+                document.getElementById('metricY2YTitle').innerHTML = `Perubahan Y-to-Y (${dataBulanIni.short})`;
+                document.getElementById('metricY2YValue').innerHTML = formatPersen(dataBulanIni.y2y);
+                updateKabupatenTable(bulan);
+            }
+        }
+        
+        function populateRataRataTable() {
+            const tbody = document.getElementById('rataRataTableBody');
+            tbody.innerHTML = '';
+            dataRataRataJabar.forEach(data => {
+                const row = `
+                    <tr>
+                        <td>${data.bulan}</td>
+                        <td>${formatRupiah(data.medium)}</td>
+                        <td>${formatRupiah(data.premium)}</td>
+                        <td>${formatRupiah(data.total)}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        function updateKabupatenTable(bulan) {
+            document.getElementById('kabupatenTableHeader').textContent = `Harga Rata-Rata Beras per Kabupaten (${bulan})`;
+            const tbody = document.getElementById('kabupatenTableBody');
+            tbody.innerHTML = '';
+            const bulanKey = bulan.split(' ')[0];
+            const dataBulanIni = dataPerKabupaten[bulanKey];
+            
+            if (dataBulanIni) {
+                dataBulanIni.forEach(data => {
+                    const row = `
+                        <tr>
+                            <td>${data.kab}</td>
+                            <td>${formatRupiah(data.medium)}</td>
+                            <td>${formatRupiah(data.premium)}</td>
+                            <td>${formatRupiah(data.total)}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center">Data untuk bulan ${bulanKey} tidak tersedia.</td></tr>`;
+            }
+        }
+
+        function updateCharts(monthsToDisplay) {
+            const filteredData = dataRataRataJabar.filter(d => monthsToDisplay.includes(d.bulan));
+            const labels = filteredData.map(d => d.short);
+            const mediumData = filteredData.map(d => d.medium);
+            const premiumData = filteredData.map(d => d.premium);
+            const totalData = filteredData.map(d => d.total);
+            const chartDatasets = [
+                { label: 'Harga Medium', data: mediumData, backgroundColor: 'rgba(255, 193, 7, 0.7)', borderColor: 'rgba(255, 193, 7, 1)', borderWidth: 1 },
+                { label: 'Harga Premium', data: premiumData, backgroundColor: 'rgba(40, 167, 69, 0.7)', borderColor: 'rgba(40, 167, 69, 1)', borderWidth: 1 },
+                { label: 'Harga Total', data: totalData, backgroundColor: 'rgba(0, 123, 255, 0.7)', borderColor: 'rgba(0, 123, 255, 1)', borderWidth: 1 }
+            ];
+            
+            barChart.data.labels = labels;
+            barChart.data.datasets = chartDatasets;
+            barChart.update();
+
+            const lineChartDatasets = JSON.parse(JSON.stringify(chartDatasets));
+            lineChartDatasets.forEach(ds => { ds.tension = 0.4; });
+
+            lineChart.data.labels = labels;
+            lineChart.data.datasets = lineChartDatasets;
+            lineChart.update();
+        }
+
+        // --- FUNGSI BARU UNTUK MEMUAT DAN MEMPROSES CSV ---
+        async function loadAndProcessData() {
+            const options = { header: true, dynamicTyping: true, download: true, skipEmptyLines: true };
+
+            const rataRataPromise = new Promise(resolve => {
+                Papa.parse('rata_rata_provinsi.csv', { ...options, complete: resolve });
+            });
+            const perKabupatenPromise = new Promise(resolve => {
+                Papa.parse('data_per_kabupaten.csv', { ...options, complete: resolve });
+            });
+
+            // Menunggu kedua file selesai di-download dan di-parse
+            const [rataRataResponse, perKabupatenResponse] = await Promise.all([rataRataPromise, perKabupatenPromise]);
+
+            dataRataRataJabar = rataRataResponse.data;
+            
+            // Mengubah data kabupaten dari array flat menjadi objek yang dikelompokkan per bulan
+            dataPerKabupaten = perKabupatenResponse.data.reduce((acc, row) => {
+                const bulan = row.bulan;
+                if (!acc[bulan]) {
+                    acc[bulan] = [];
+                }
+                acc[bulan].push(row);
+                return acc;
+            }, {});
+        }
+
+        // --- FUNGSI UTAMA UNTUK INISIALISASI DASHBOARD ---
+        async function initDashboard() {
+            console.log("Memulai inisialisasi dashboard...");
+            
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(barCtx, { type: 'bar', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            lineChart = new Chart(lineCtx, { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
+
+            try {
+                await loadAndProcessData();
+                console.log("Data CSV berhasil dimuat dan diproses.");
+
+                const metricFilter = document.getElementById('metricMonthFilter');
+                dataRataRataJabar.forEach(data => {
+                    metricFilter.innerHTML += `<option value="${data.bulan}">${data.bulan}</option>`;
+                });
+
+                metricFilter.value = dataRataRataJabar[dataRataRataJabar.length - 1].bulan;
+                populateRataRataTable();
+                
+                const initialMetricMonth = metricFilter.value;
+                updateMetrics(initialMetricMonth);
+                
+                const allMonthsForChart = dataRataRataJabar.map(d => d.bulan);
+                updateCharts(allMonthsForChart);
+                
+                metricFilter.addEventListener('change', (e) => {
+                    updateMetrics(e.target.value);
+                });
+                
+                // Event Listener Tombol Download
+                const downloadRataRataHandler = () => {
+                    const headers = ["Bulan", "Harga Medium (Rp)", "Harga Premium (Rp)", "Harga Total (Rp)"];
+                    const keys = ["bulan", "medium", "premium", "total"];
+                    exportToCSV(dataRataRataJabar, headers, keys, "harga-rata-rata-beras-bulanan-jabar");
+                };
+                document.getElementById('downloadRataRataCSV').addEventListener('click', downloadRataRataHandler);
+                document.getElementById('downloadRataRataXLS').addEventListener('click', downloadRataRataHandler);
+
+                const downloadKabupatenHandler = () => {
+                    const selectedBulanFull = document.getElementById('metricMonthFilter').value;
+                    const bulanKey = selectedBulanFull.split(' ')[0];
+                    const dataToExport = dataPerKabupaten[bulanKey];
+                    const headers = ["Kabupaten/Kota", "Harga Medium (Rp)", "Harga Premium (Rp)", "Harga Total (Rp)"];
+                    const keys = ["kab", "medium", "premium", "total"];
+                    exportToCSV(dataToExport, headers, keys, `harga-beras-per-kabupaten-${bulanKey}`);
+                };
+                document.getElementById('downloadKabupatenCSV').addEventListener('click', downloadKabupatenHandler);
+                document.getElementById('downloadKabupatenXLS').addEventListener('click', downloadKabupatenHandler);
+            
+            } catch (error) {
+                console.error("Gagal memuat atau memproses data CSV:", error);
+                alert("Terjadi kesalahan saat memuat data. Pastikan file CSV ada dan server lokal berjalan. Cek console untuk detail.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+    </script>
+</body>
+</html>
